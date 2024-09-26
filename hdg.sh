@@ -156,7 +156,7 @@ done
 
 
 clear
-echo -e "\e[1;32mDisplaying top 10 IPs with valid latency...\e[0m"
+echo -e "\e[1;32mDisplaying top IPs with valid latency...\e[0m"
 display_table_ipv4 "$ping_results"
 
 comma_separated_ips=$(IFS=,; echo "${valid_ips[*]}")
