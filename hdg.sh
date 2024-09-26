@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Convert an IP address to a decimal value
+
 ip_to_decimal() {
     local ip="$1"
     local a b c d
@@ -8,7 +8,7 @@ ip_to_decimal() {
     echo "$((a * 256**3 + b * 256**2 + c * 256 + d))"
 }
 
-# Convert a decimal value back to an IP address
+
 decimal_to_ip() {
     local dec="$1"
     local a=$((dec / 256**3 % 256))
@@ -18,7 +18,7 @@ decimal_to_ip() {
     echo "$a.$b.$c.$d"
 }
 
-# Measure latency by pinging the IP address
+
 measure_latency() {
     local ip=$1
     local latency=$(ping -c 1 -W 1 "$ip" | grep 'time=' | awk -F'time=' '{ print $2 }' | cut -d' ' -f1)
@@ -28,17 +28,17 @@ measure_latency() {
     printf "%s %s\n" "$ip" "$latency"
 }
 
-# Generate a limited number of random IPs within a CIDR range
+
 generate_ips_in_cidr() {
     local cidr="$1"
-    local limit="$2" # Limit for number of IPs to generate
+    local limit="$2" 
     local base_ip=$(echo "$cidr" | cut -d'/' -f1)
     local prefix=$(echo "$cidr" | cut -d'/' -f2)
     local ip_dec=$(ip_to_decimal "$base_ip")
     local range_size=$((2 ** (32 - prefix)))
     local ips=()
 
-    # Generate random IPs within the range
+    
     for ((i=0; i<limit; i++)); do
         local random_offset=$((RANDOM % range_size))
         ips+=("$(decimal_to_ip $((ip_dec + random_offset)))")
@@ -47,7 +47,7 @@ generate_ips_in_cidr() {
     echo "${ips[@]}"
 }
 
-# Ensure required packages are installed
+
 check_and_install() {
     if ! command -v $1 &> /dev/null; then
         echo "$1 not found, installing..."
@@ -57,7 +57,7 @@ check_and_install() {
     fi
 }
 
-# Install required packages
+
 check_and_install ping inetutils
 check_and_install awk coreutils
 check_and_install grep grep
@@ -65,7 +65,7 @@ check_and_install cut coreutils
 check_and_install curl curl
 check_and_install bc bc
 
-# Fastly IP Ranges
+
 IP_RANGES=(
     "23.235.32.0/20" "43.249.72.0/22" "103.244.50.0/24" "103.245.222.0/23"
     "103.245.224.0/24" "104.156.80.0/20" "140.248.64.0/18" "140.248.128.0/17"
@@ -74,7 +74,7 @@ IP_RANGES=(
     "185.31.16.0/22" "199.27.72.0/21" "199.232.0.0/16"
 )
 
-# Function to show progress
+
 show_progress() {
     local current=$1
     local total=$2
@@ -89,10 +89,10 @@ show_progress() {
     printf "] %d%%" "$percent"
 }
 
-# Set the number of IPs to generate from each range
+
 LIMIT=50
 
-# Select random IP ranges and generate limited IPs
+
 SELECTED_IP_RANGES=($(shuf -e "${IP_RANGES[@]}" -n 5))
 echo "Selected IP Ranges: ${SELECTED_IP_RANGES[@]}"
 
@@ -102,10 +102,10 @@ for range in "${SELECTED_IP_RANGES[@]}"; do
     SELECTED_IPS+=("${ips[@]}")
 done
 
-# Shuffle the selected IPs
+
 SHUFFLED_IPS=($(shuf -e "${SELECTED_IPS[@]}" -n 100))
 
-# Display a table of valid IPs with latency
+
 display_table_ipv4() {
     printf "+-----------------------+------------+\n"
     printf "| IP                    | Latency(ms) |\n"
@@ -119,13 +119,13 @@ display_table_ipv4() {
     printf "+-----------------------+------------+\n"
 }
 
-# Measure latency and filter valid IPs
+
 valid_ips=()
 total_ips=${#SHUFFLED_IPS[@]}
 processed_ips=0
 
 while [[ ${#valid_ips[@]} -lt 10 ]]; do
-    # Ping IPs in parallel and capture results
+    
     ping_results=$(printf "%s\n" "${SHUFFLED_IPS[@]}" | xargs -I {} -P 10 bash -c '
     measure_latency() {
         local ip="$1"
@@ -138,13 +138,13 @@ while [[ ${#valid_ips[@]} -lt 10 ]]; do
     measure_latency "$@"
     ' _ {})
 
-    # Collect valid IPs with non-N/A latency
+    
     valid_ips=($(echo "$ping_results" | grep -v "N/A" | awk '{print $1}'))
 
     processed_ips=$((${#valid_ips[@]} + ${#SHUFFLED_IPS[@]} - $total_ips))
     show_progress $processed_ips $total_ips
 
-    # If not enough valid IPs, generate more
+    
     if [[ ${#valid_ips[@]} -lt 10 ]]; then
         echo -e "\nNot enough valid IPs found. Selecting more IP ranges..."
         additional_ips=($(generate_ips_in_cidr "$range" "$LIMIT"))
@@ -154,7 +154,7 @@ while [[ ${#valid_ips[@]} -lt 10 ]]; do
     fi
 done
 
-# Display the results
+
 clear
 echo -e "\e[1;32mDisplaying top 10 IPs with valid latency...\e[0m"
 display_table_ipv4 "$ping_results"
